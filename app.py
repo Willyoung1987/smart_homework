@@ -79,6 +79,18 @@ if role == "学生":
         st.divider()
         st.write(f"欢迎你，**{st.session_state.student_name}**")
 
+        # ✅ 新增：注销账号
+        with st.expander("⚠️ 注销账号（谨慎操作）"):
+            confirm = st.checkbox("我确认要注销自己的账号")
+            if st.button("注销账号"):
+                if confirm:
+                    students = load_csv(STUDENT_FILE)
+                    students = students[students["学号"] != sid]
+                    save_csv(students, STUDENT_FILE)
+                    st.session_state.student_logged_in = False
+                    st.warning("账号已注销，已退出登录")
+                    st.stop()
+
         today = datetime.now().strftime("%Y-%m-%d")
         plans = load_csv(PLAN_FILE)
         today_tasks = plans[plans["日期"] == today]
@@ -151,7 +163,7 @@ elif role == "老师":
     else:
         st.divider()
 
-        # ===== 学生账号管理 =====
+        # ===== 学生账号管理（原样保留）=====
         st.markdown("## 👥 学生账号管理")
         students = load_csv(STUDENT_FILE)
 
@@ -188,7 +200,27 @@ elif role == "老师":
                     st.success("学生账号已修改 ✅")
 
         st.dataframe(students, use_container_width=True)
+# ✅ 新增：删除学生账号
+        with st.expander("🗑️ 删除学生账号（谨慎操作）"):
+            if not students.empty:
+                del_sid = st.selectbox(
+                    "选择要删除的学生学号",
+                    students["学号"],
+                    key="delete_student_select"
+                )
 
+                confirm = st.checkbox(
+                    "我确认要删除该学生账号（不可恢复）",
+                    key="delete_student_confirm"
+                )
+
+                if st.button("删除学生账号", key="delete_student_btn"):
+                    if confirm:
+                        students = students[students["学号"] != del_sid]
+                        save_csv(students, STUDENT_FILE)
+                        st.success(f"学生账号 {del_sid} 已删除 ✅")
+                    else:
+                        st.warning("请先勾选确认框")
         # ===== 作业管理 =====
         st.divider()
         st.markdown("## 📝 作业管理")
@@ -237,6 +269,26 @@ elif role == "老师":
                 if st.button("保存修改", key="save_plan_edit"):
                     save_csv(plans, PLAN_FILE)
                     st.success("作业已修改 ✅")
+
+        # ✅ 新增：删除作业
+        with st.expander("🗑️ 删除作业（谨慎操作）"):
+            if not plans.empty:
+                del_idx = st.selectbox(
+                    "选择要删除的作业",
+                    plans.index,
+                    format_func=lambda i:
+                        f"{plans.loc[i,'日期']}｜{plans.loc[i,'学科']}｜{plans.loc[i,'作业内容']}",
+                    key="delete_plan_select"
+                )
+                confirm = st.checkbox("确认删除该作业", key="delete_plan_confirm")
+
+                if st.button("删除作业", key="delete_plan_btn"):
+                    if confirm:
+                        plans = plans.drop(del_idx)
+                        save_csv(plans, PLAN_FILE)
+                        st.success("作业已删除 ✅")
+                    else:
+                        st.warning("请先确认删除操作")
 
         st.dataframe(plans, use_container_width=True)
 
